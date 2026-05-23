@@ -4,7 +4,8 @@ The paper is available at the following link: ["Optimistic, Signature-Free Relia
 
 Note that, in versions `v3` and earlier, the optimistic RBC protocol has a liveness issue.
 Version `v4` fixes the issue.
-Additionally, to rule out any possible remaining issue, we have mechanically-checked both the safety and liveness of the optimistic RBC protocol, for arbitrarily many parties and arbitrary long executions, using the Ivy prover and the Isabelle/HOL proof assistant (see below).
+Additionally, to rule out any remaining issue, we have written a mechanically-checked proof of both the safety and liveness of the optimistic RBC protocol.
+This proof uses the Ivy prover and the Isabelle/HOL proof assistant (see below).
 
 ## PlusCal/TLA+ specification of Sailfish++
 
@@ -27,9 +28,11 @@ Have a look at the Makefile to tweak TLC options.
 Notes:
 - `make trans` rewrites the TLA+ module in place after PlusCal translation.
 - The Makefile expects `java` and `wget` to be available to download and run `tla2tools.jar`.
-
+  
 ## Optimistic Reliable Broadcast
 
 ### PlusCal/TLA+ specification
+
+A PlusCal/TLA+ specification appears in [TwoStepOptimiticBroadcast.tla](./TwoStepOptimiticBroadcast.tla).
 
 ### Ivy and Isabelle/HOL specifications and mechanically-checked proofs
