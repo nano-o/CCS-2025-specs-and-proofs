@@ -1,5 +1,5 @@
 session OptiRBC = HOL +
-  options [document = pdf, document_output = "output", browser_info=true, quick_and_dirty=true]
+  options [document_output = "output"]
   theories
     AbstractDomainModel AxiomaticDomainModel
   document_files

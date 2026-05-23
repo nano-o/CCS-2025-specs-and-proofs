@@ -60,7 +60,10 @@ block-dag-test: $(JAR)
 check-ivy:
 	ivy_check seed=$$(od -An -N2 -tu2 /dev/urandom | tr -d ' ') opti_rbc.ivy
 
-# Isabelle session build (theories + PDF + browser_info under OptiRBC/output).
+# Isabelle session build. The OptiRBC session does not build a PDF by
+# default (ROOT no longer sets document = pdf) so this works without a
+# LaTeX toolchain. To also regenerate OptiRBC/browser_info/document.pdf
+# locally, run `isabelle build -o document=pdf -D OptiRBC` instead.
 check-isabelle:
 	isabelle build -D OptiRBC
 
@@ -73,7 +76,7 @@ check-isabelle:
 #
 DOCKERHUB_USER ?= giulianolosa
 IMAGE_NAME     ?= ccs2025-formal-specs-artifacts
-IMAGE_VERSION  ?= v4
+IMAGE_VERSION  ?= v1
 IMAGE          := $(DOCKERHUB_USER)/$(IMAGE_NAME)
 
 docker-build:

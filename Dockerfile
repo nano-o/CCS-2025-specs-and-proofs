@@ -34,14 +34,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Isabelle into /opt/Isabelle and put its binary on PATH.
-# TEMPORARILY DISABLED while iterating on the rest of the image. Re-enable
-# when Ivy/TLC are confirmed working in the container.
-# RUN wget --progress=dot:giga -O /tmp/isabelle.tar.gz "$ISABELLE_URL" \
-#     && mkdir -p /opt \
-#     && tar -xzf /tmp/isabelle.tar.gz -C /opt \
-#     && mv "/opt/${ISABELLE_VERSION}" /opt/Isabelle \
-#     && rm /tmp/isabelle.tar.gz \
-#     && ln -s /opt/Isabelle/bin/isabelle /usr/local/bin/isabelle
+RUN wget --progress=dot:giga -O /tmp/isabelle.tar.gz "$ISABELLE_URL" \
+    && mkdir -p /opt \
+    && tar -xzf /tmp/isabelle.tar.gz -C /opt \
+    && mv "/opt/${ISABELLE_VERSION}" /opt/Isabelle \
+    && rm /tmp/isabelle.tar.gz \
+    && ln -s /opt/Isabelle/bin/isabelle /usr/local/bin/isabelle
 
 # Additional packages for Ivy and developer convenience. python:3.12-slim
 # already ships python3, pip and venv; we just need tk and a few extras.
@@ -76,9 +74,8 @@ RUN useradd -m -s /bin/bash imageuser \
 # lives in the user's home and the first `make check-isabelle` only
 # has to build the OptiRBC session itself. Done before the COPY below
 # so edits to repo files do not invalidate this layer.
-# TEMPORARILY DISABLED along with the Isabelle install above.
 USER imageuser
-# RUN isabelle build -b HOL
+RUN isabelle build -b HOL
 
 WORKDIR /artifact
 COPY --chown=imageuser:imageuser . /artifact
