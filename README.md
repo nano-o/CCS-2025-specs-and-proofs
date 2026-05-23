@@ -14,15 +14,15 @@ A [Dockerfile](./Dockerfile) is provided that bundles Java/TLC, Ivy, and Isabell
 A pre-built image is published to Docker Hub:
 
 ```bash
-docker pull giulianolosa/ccs2025-formal-specs-artifacts:latest
-docker run --rm -it giulianolosa/ccs2025-formal-specs-artifacts:latest
+docker pull giulianolosa/ccs2025-artifact:latest
+docker run --rm -it giulianolosa/ccs2025-artifact:latest
 ```
 
 To build the image yourself instead:
 
 ```bash
-docker build -t ccs2025-formal-specs-artifacts .
-docker run --rm -it ccs2025-formal-specs-artifacts
+docker build -t ccs2025-artifact .
+docker run --rm -it ccs2025-artifact
 ```
 
 Inside the container, from `/artifact`:

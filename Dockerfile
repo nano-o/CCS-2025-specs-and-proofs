@@ -89,8 +89,8 @@ RUN make trans TLA_SPEC=Sailfish.tla \
 CMD ["/bin/bash"]
 
 # Build and run:
-#   docker build -t ccs2025-formal-specs-artifacts .
-#   docker run --rm -it ccs2025-formal-specs-artifacts
+#   docker build -t ccs2025-artifact .
+#   docker run --rm -it ccs2025-artifact
 # Inside the container:
 #   make check-ivy        # check the Ivy proof
 #   make check-isabelle   # build the Isabelle session

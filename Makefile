@@ -75,8 +75,8 @@ check-isabelle:
 #   make docker-push DOCKERHUB_USER=someone IMAGE_VERSION=v5
 #
 DOCKERHUB_USER ?= giulianolosa
-IMAGE_NAME     ?= ccs2025-formal-specs-artifacts
-IMAGE_VERSION  ?= v1
+IMAGE_NAME     ?= ccs2025-artifact
+IMAGE_VERSION  ?= v4
 IMAGE          := $(DOCKERHUB_USER)/$(IMAGE_NAME)
 
 docker-build:
