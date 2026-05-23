@@ -28,7 +28,7 @@ docker run --rm -it ccs2025-formal-specs-artifacts
 Inside the container, from `/artifact`:
 
 - `make check-ivy` -- check the Ivy proof.
-- `make check-isabelle` -- build the Isabelle session.
+- `make check-isabelle` -- check the Isabelle proofs.
 - `make run-tlc TLA_SPEC=TLCSailfish1.tla` -- run TLC on a TLA+ spec (see below).
 
 ## PlusCal/TLA+ specification of Sailfish++
