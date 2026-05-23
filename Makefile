@@ -55,4 +55,32 @@ block-dag-test: TLA_SPEC=BlockDagTest.tla
 block-dag-test: $(JAR)
 	$(TLC_CMD) $(TLA_SPEC)
 
-.PHONY: sany trans run-tlc pdfs block-dag-test run-tlc-diskcap
+# Ivy proof check. Re-run with a different random seed if it times out.
+# The seed is generated portably (dash does not implement $RANDOM).
+check-ivy:
+	ivy_check seed=$$(od -An -N2 -tu2 /dev/urandom | tr -d ' ') opti_rbc.ivy
+
+# Isabelle session build (theories + PDF + browser_info under OptiRBC/output).
+check-isabelle:
+	isabelle build -D OptiRBC
+
+# --- Docker image -----------------------------------------------------------
+#
+# Build and publish the toolchain image to Docker Hub. Override the
+# DOCKERHUB_USER / IMAGE_VERSION variables on the command line to push under
+# a different account or tag, e.g.
+#   make docker-push DOCKERHUB_USER=someone IMAGE_VERSION=v5
+#
+DOCKERHUB_USER ?= giulianolosa
+IMAGE_NAME     ?= ccs2025-formal-specs-artifacts
+IMAGE_VERSION  ?= v4
+IMAGE          := $(DOCKERHUB_USER)/$(IMAGE_NAME)
+
+docker-build:
+	docker build -t $(IMAGE):$(IMAGE_VERSION) -t $(IMAGE):latest .
+
+docker-push: docker-build
+	docker push $(IMAGE):$(IMAGE_VERSION)
+	docker push $(IMAGE):latest
+
+.PHONY: sany trans run-tlc pdfs block-dag-test run-tlc-diskcap check-ivy check-isabelle docker-build docker-push

@@ -7,6 +7,30 @@ Version `v4` fixes the issue.
 Additionally, to rule out any remaining issue, we have written a mechanically-checked proof of both the safety and liveness of the optimistic RBC protocol.
 This proof uses the Ivy prover and the Isabelle/HOL proof assistant (see below).
 
+## Docker image
+
+A [Dockerfile](./Dockerfile) is provided that bundles Java/TLC, Ivy, and Isabelle in a single image so all the artifacts in this repo can be checked without installing anything locally.
+
+A pre-built image is published to Docker Hub:
+
+```bash
+docker pull giulianolosa/ccs2025-formal-specs-artifacts:latest
+docker run --rm -it giulianolosa/ccs2025-formal-specs-artifacts:latest
+```
+
+To build the image yourself instead:
+
+```bash
+docker build -t ccs2025-formal-specs-artifacts .
+docker run --rm -it ccs2025-formal-specs-artifacts
+```
+
+Inside the container, from `/artifact`:
+
+- `make check-ivy` -- check the Ivy proof.
+- `make check-isabelle` -- build the Isabelle session.
+- `make run-tlc TLA_SPEC=TLCSailfish1.tla` -- run TLC on a TLA+ spec (see below).
+
 ## PlusCal/TLA+ specification of Sailfish++
 
 ### Block DAGs
