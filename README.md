@@ -111,3 +111,7 @@ cp /tmp/optirbc_browser/Unsorted/OptiRBC/*.html \
 ```
 
 `-P` writes the presentation tree (`<group>/<session>/`) to the given directory; since `ROOT` does not set a group, the session lands under `Unsorted/OptiRBC/`. `-o document=pdf` enables PDF generation (requires a LaTeX toolchain with LuaLaTeX). The `cp` line picks up both the HTML pages and `document.pdf`. Commit the refreshed files in `OptiRBC/browser_info/` so the links keep working.
+
+## License
+
+Copyright 2026 Stellar Development Foundation. Licensed under the Apache License, Version 2.0; see [LICENSE](./LICENSE) and [NOTICE](./NOTICE).
