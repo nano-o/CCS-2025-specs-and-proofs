@@ -1,0 +1,394 @@
+#lang ivy1.7
+
+################################################################################
+#
+# Optimistic Reliable Broadcast (OptiRBC)
+#
+# Liveness Strategy: the state-space is finite and non-faulty actions are
+# monotonic, so eventually no more non-faulty actions are enabled.  At that point
+# we check all liveness conditions hold.
+#
+################################################################################
+
+################################################################################
+# Types
+################################################################################
+
+type party
+type val
+
+# Quorum types (abstract witnesses for threshold sets of parties)
+type opt_quorum
+type maj_quorum
+type classic_quorum
+type amplification_quorum
+type commit_quorum
+
+################################################################################
+# Immutable state (theory parameters)
+################################################################################
+
+individual broadcaster : party
+relation faulty(P:party)
+
+relation opt_quorum_member(Q:opt_quorum, P:party)
+relation maj_quorum_member(Q:maj_quorum, P:party)
+relation classic_quorum_member(Q:classic_quorum, P:party)
+relation amplification_quorum_member(Q:amplification_quorum, P:party)
+relation commit_quorum_member(Q:commit_quorum, P:party)
+
+################################################################################
+# Mutable state
+################################################################################
+
+relation proposal(V:val)
+relation echo(P:party, V:val)
+relation vote(P:party, V:val)
+relation ack(P:party, V:val)
+relation ready(P:party, V:val)
+relation committed(P:party, V:val)
+
+individual pv : val  # proposal of the non-faulty broadcaster (if any)
+
+################################################################################
+# Abstract domain model assumptions (quorum intersection properties)
+################################################################################
+
+# Classic, majority, and optimistic quorums do not contain the broadcaster.
+axiom [broadcaster_not_in_classic_quorum]
+    forall Q. ~classic_quorum_member(Q, broadcaster)
+
+axiom [broadcaster_not_in_maj_quorum]
+    forall Q. ~maj_quorum_member(Q, broadcaster)
+
+axiom [broadcaster_not_in_opt_quorum]
+    forall Q. ~opt_quorum_member(Q, broadcaster)
+
+# The set of non-faulty parties satisfies all the quorum thresholds
+# except the optimistic quorum threshold.
+
+axiom [non_faulty_commit_quorum]
+    exists Q. forall P. commit_quorum_member(Q, P) -> ~faulty(P)
+
+axiom [non_faulty_amplification_quorum]
+    exists Q. forall P. amplification_quorum_member(Q, P) -> ~faulty(P)
+
+axiom [non_faulty_maj_quorum]
+    exists Q. forall P. maj_quorum_member(Q, P) -> ~faulty(P)
+
+axiom [non_faulty_classic_quorum]
+    exists Q. forall P. classic_quorum_member(Q, P) -> ~faulty(P)
+
+# An optimistic quorum contains a non-faulty member.
+axiom [opt_quorum_has_nonfaulty_member]
+    forall Q. exists P. ~faulty(P) & opt_quorum_member(Q, P)
+
+# When the broadcaster is faulty, any two optimistic quorums share a
+# non-faulty member.
+axiom [opt_quorum_intersection]
+    forall Q1, Q2.
+        faulty(broadcaster) ->
+            exists P. ~faulty(P) & opt_quorum_member(Q1, P) & opt_quorum_member(Q2, P)
+
+# When the broadcaster is faulty, an optimistic quorum and a majority
+# quorum share a non-faulty member.
+axiom [opt_maj_quorum_intersection]
+    forall Q1, Q2.
+        faulty(broadcaster) ->
+            exists P. ~faulty(P) & opt_quorum_member(Q1, P) & maj_quorum_member(Q2, P)
+
+# When the broadcaster is faulty, an optimistic quorum and a classic quorum
+# share a non-faulty member.
+axiom [opt_quorum_intersects_classic_quorum]
+    forall Q1, Q2.
+        faulty(broadcaster) ->
+            exists P. ~faulty(P) & opt_quorum_member(Q1, P) & classic_quorum_member(Q2, P)
+
+# When the broadcaster is faulty, any two classic quorums share a non-faulty member.
+axiom [classic_quorum_intersection]
+    forall Q1, Q2.
+        faulty(broadcaster) ->
+            exists P. ~faulty(P) & classic_quorum_member(Q1, P) & classic_quorum_member(Q2, P)
+
+# Every classic quorum contains a non-faulty member.
+axiom [quorum_not_faulty]
+    forall Q. exists P. ~faulty(P) & classic_quorum_member(Q, P)
+
+# Every majority quorum contains a non-faulty member.
+axiom [maj_quorum_has_nonfaulty_member]
+    forall Q. exists P. ~faulty(P) & maj_quorum_member(Q, P)
+
+# Every amplification quorum contains a non-faulty member.
+axiom [amplification_quorum_has_nonfaulty_member]
+    forall Q. exists P. ~faulty(P) & amplification_quorum_member(Q, P)
+
+# When the broadcaster is faulty, for any optimistic quorum there exists a
+# majority quorum whose members are all non-faulty and in the optimistic quorum.
+axiom [opt_quorum_contains_maj_quorum]
+    forall Q.
+        faulty(broadcaster) ->
+            exists Q2. forall P.
+                maj_quorum_member(Q2, P) -> ~faulty(P) & opt_quorum_member(Q, P)
+
+# For any commit quorum there exists an amplification quorum whose members
+# are all non-faulty and in the commit quorum.
+axiom [commit_quorum_contains_non_faulty_amplification_quorum]
+    forall Q.
+        exists Q2. forall P.
+            amplification_quorum_member(Q2, P) -> ~faulty(P) & commit_quorum_member(Q, P)
+
+################################################################################
+# Initialization
+################################################################################
+
+after init {
+    proposal(V) := false;
+    echo(P, V) := false;
+    vote(P, V) := false;
+    ack(P, V) := false;
+    ready(P, V) := false;
+    committed(P, V) := false;
+}
+
+################################################################################
+# Protocol actions
+################################################################################
+
+# The broadcaster proposes.
+action propose = {
+    require forall V. ~proposal(V);
+    proposal(pv) := true;
+}
+
+# A non-broadcaster party echoes a proposed value (at most one echo per party).
+action echo_step(p:party, v:val) = {
+    require p ~= broadcaster;
+    require forall V. ~echo(p, V);
+    require proposal(v);
+    echo(p, v) := true;
+}
+
+# A non-broadcaster party votes for a value after seeing a majority-quorum
+# of echoes (unless it has already voted for some other value).
+action vote_step(p:party, v:val) = {
+    require p ~= broadcaster;
+    require forall V. ~vote(p, V);
+    require exists Q. forall P. maj_quorum_member(Q, P) -> echo(P, v);
+    vote(p, v) := true;
+}
+
+# A non-broadcaster party sends an ack after seeing either a quorum of votes
+# or a quorum of echoes (unless it has already acked some other value).
+action ack_step(p:party, v:val) = {
+    require p ~= broadcaster;
+    require forall V. ~ack(p, V);
+    require (exists Q. forall P. classic_quorum_member(Q, P) -> vote(P, v))
+          | (exists Q. forall P. classic_quorum_member(Q, P) -> echo(P, v));
+    ack(p, v) := true;
+}
+
+# A party becomes ready after seeing either a quorum of acks
+# or an amplification-quorum of readys (unless it has already become ready
+# for some other value).
+action ready_step(p:party, v:val) = {
+    require forall V. ~ready(p, V);
+    require (exists Q. forall P. classic_quorum_member(Q, P) -> ack(P, v))
+          | (exists Q. forall P. amplification_quorum_member(Q, P) -> ready(P, v));
+    ready(p, v) := true;
+}
+
+# Optimistic commit: a non-broadcaster party commits after seeing an
+# optimistic-quorum of echoes (unless it has already committed some other value).
+action opt_commit_step(p:party, v:val) = {
+    require p ~= broadcaster;
+    require forall V. ~committed(p, V);
+    require exists Q. forall P. opt_quorum_member(Q, P) -> echo(P, v);
+    committed(p, v) := true;
+}
+
+# Normal commit: a party commits after seeing a commit-quorum of readys
+# (unless it has already committed some other value).
+action commit_step(p:party, v:val) = {
+    require forall V. ~committed(p, V);
+    require exists Q. forall P. commit_quorum_member(Q, P) -> ready(P, v);
+    committed(p, v) := true;
+}
+
+# Byzantine step: a faulty broadcaster can set proposal arbitrarily.
+action byz_proposal = {
+    require faulty(broadcaster);
+    proposal(V) := *;
+}
+
+# Byzantine step: a faulty party can set its echo/vote/ack/ready arbitrarily.
+action byz_party(p:party) = {
+    require faulty(p);
+    echo(p, V) := *;
+    vote(p, V) := *;
+    ack(p, V) := *;
+    ready(p, V) := *;
+}
+
+################################################################################
+# Ghost enabledness relations
+################################################################################
+
+relation propose_enabled
+definition propose_enabled =
+    ~faulty(broadcaster) & forall V. ~proposal(V)
+
+relation echo_enabled(P:party, V:val)
+definition echo_enabled(P, V) =
+    ~faulty(P) & P ~= broadcaster & ~faulty(broadcaster) & (forall V2. ~echo(P, V2)) & proposal(V)
+
+relation vote_enabled(P:party, V:val)
+definition vote_enabled(P, V) =
+    ~faulty(P) & P ~= broadcaster & (forall V2. ~vote(P, V2))
+    & (exists Q. forall P2. maj_quorum_member(Q, P2) -> ~faulty(P2) & echo(P2, V))
+
+relation ack_enabled(P:party, V:val)
+definition ack_enabled(P, V) =
+    ~faulty(P) & P ~= broadcaster & (forall V2. ~ack(P, V2))
+    & ((exists Q. forall P2. classic_quorum_member(Q, P2) -> ~faulty(P2) & vote(P2, V))
+       | (exists Q. forall P2. classic_quorum_member(Q, P2) -> ~faulty(P2) & echo(P2, V)))
+
+relation ready_enabled(P:party, V:val)
+definition ready_enabled(P, V) =
+    ~faulty(P) & (forall V2. ~ready(P, V2))
+    & ((exists Q. forall P2. classic_quorum_member(Q, P2) -> ~faulty(P2) & ack(P2, V))
+       | (exists Q. forall P2. amplification_quorum_member(Q, P2) -> ~faulty(P2) & ready(P2, V)))
+
+relation opt_commit_enabled(P:party, V:val)
+definition opt_commit_enabled(P, V) =
+    ~faulty(P) & P ~= broadcaster & (forall V2. ~committed(P, V2))
+    & (exists Q. forall P2. opt_quorum_member(Q, P2) -> ~faulty(P2) & echo(P2, V))
+
+relation commit_enabled(P:party, V:val)
+definition commit_enabled(P, V) =
+    ~faulty(P) & (forall V2. ~committed(P, V2))
+    & (exists Q. forall P2. commit_quorum_member(Q, P2) -> ~faulty(P2) & ready(P2, V))
+
+################################################################################
+# Liveness properties
+################################################################################
+
+# Validity: if the broadcaster is non-faulty and no non-faulty actions are
+# enabled, then every non-faulty party has committed pv.
+action check_validity(p:party) = {
+    require ~faulty(broadcaster);
+    require ~faulty(p);
+    # no action is enabled:
+    require ~propose_enabled;
+    require forall P, V. ~echo_enabled(P, V);
+    require forall P, V. ~vote_enabled(P, V);
+    require forall P, V. ~ack_enabled(P, V);
+    require forall P, V. ~ready_enabled(P, V);
+    require forall P, V. ~commit_enabled(P, V);
+    # p must have committed the broadcaster's value:
+    assert committed(p, pv);
+}
+
+# Totality: if two non-faulty parties exist,
+# p1 has committed pv, and no non-faulty actions are enabled, then p2 has
+# also committed pv.
+action check_totality(p1:party, p2:party, v:val) = {
+    require ~faulty(p1) & ~faulty(p2);
+    require committed(p1, v);
+    # no action is enabled:
+    require ~propose_enabled;
+    require forall P, V. ~echo_enabled(P, V);
+    require forall P, V. ~vote_enabled(P, V);
+    require forall P, V. ~ack_enabled(P, V);
+    require forall P, V. ~ready_enabled(P, V);
+    require forall P, V. ~commit_enabled(P, V);
+    assert committed(p2, v);
+}
+
+export propose
+export echo_step
+export vote_step
+export ack_step
+export ready_step
+export opt_commit_step
+export commit_step
+export byz_proposal
+export byz_party
+export check_validity
+export check_totality
+
+
+################################################################################
+# Invariants
+################################################################################
+
+# inv0: non-faulty parties never echo, vote, ack, ready, or commit two different values
+invariant [inv0]
+    forall P, V1, V2. ~faulty(P) & V1 ~= V2 ->
+        ~(echo(P, V1) & echo(P, V2))
+        & ~(vote(P, V1) & vote(P, V2))
+        & ~(ack(P, V1) & ack(P, V2))
+        & ~(ready(P, V1) & ready(P, V2))
+        & ~(committed(P, V1) & committed(P, V2))
+
+# inv1: If a non-faulty party commits value v, then either
+#   (a) an amplification quorum of non-faulty parties are ready for v, or
+#   (b) the non-faulty members of some optimistic quorum have echoed v.
+invariant [inv1]
+    forall P, V. ~faulty(P) & committed(P, V) ->
+        (exists Q. forall P2. amplification_quorum_member(Q, P2) -> ~faulty(P2) & ready(P2, V))
+        | (exists Q. forall P2. opt_quorum_member(Q, P2) & ~faulty(P2) -> echo(P2, V))
+
+# inv2: If a non-faulty party is ready for v, then the non-faulty members of
+# some classic quorum have acked v.
+invariant [inv2]
+    forall P, V. ~faulty(P) & ready(P, V) ->
+        exists Q. forall P2. classic_quorum_member(Q, P2) & ~faulty(P2) -> ack(P2, V)
+
+# inv3: If a non-faulty party has acked v, then either
+#   (a) the non-faulty members of some classic quorum have all voted for v, or
+#   (b) the non-faulty members of some classic quorum have all echoed v.
+invariant [inv3]
+    forall P, V. ~faulty(P) & ack(P, V) ->
+        (exists Q. forall P2. classic_quorum_member(Q, P2) & ~faulty(P2) -> vote(P2, V))
+        | (exists Q. forall P2. classic_quorum_member(Q, P2) & ~faulty(P2) -> echo(P2, V))
+
+# inv5: if a non-faulty party votes for v, then the non-faulty members of
+# some majority quorum have echoed v.
+invariant [inv5]
+    forall P, V. ~faulty(P) & vote(P, V) ->
+        exists Q. forall P2. maj_quorum_member(Q, P2) & ~faulty(P2) -> echo(P2, V)
+
+# Agreement: no two non-faulty parties commit different values.
+invariant [agreement]
+    forall P1, P2, V1, V2.
+        ~faulty(P1) & ~faulty(P2) & committed(P1, V1) & committed(P2, V2) -> V1 = V2
+
+# inv7: if the broadcaster is not faulty, then it makes at most one proposal
+# and non-faulty parties only echo, vote, ack, ready, or commit the value
+# proposed by the broadcaster.
+invariant [inv7] ~faulty(broadcaster) ->
+    (forall V. proposal(V) -> V = pv)
+    & (forall P, V. ~faulty(P) ->
+        (echo(P, V) -> proposal(V))
+        & (vote(P, V) -> proposal(V))
+        & (ack(P, V) -> proposal(V))
+        & (ready(P, V) -> proposal(V))
+        & (committed(P, V) -> proposal(V)))
+
+# inv4: no two non-faulty parties are ready for different values.
+invariant [inv4]
+    forall P1, P2, V1, V2.
+        ~faulty(P1) & ~faulty(P2) & ready(P1, V1) & ready(P2, V2) -> V1 = V2
+
+# inv6: if an optimistic quorum has echoed v, then no non-faulty party votes
+# for a different value.
+invariant [inv6]
+    forall V.
+        (exists Q. forall P. opt_quorum_member(Q, P) & ~faulty(P) -> echo(P, V)) ->
+            (forall P, V2. ~faulty(P) & vote(P, V2) -> V2 = V)
+
+# if an optimistic quorum echoes some value, then no non-faulty party acks a different value
+invariant [inv8] (forall P2. opt_quorum_member(Q, P2) & ~faulty(P2) -> echo(P2, V2)) -> (forall P1, V1 . ~faulty(P1) & V1 ~= V2 -> ~ack(P1,V1))
+
+# if the broadcaster is not faulty and a non-faulty party commits, then the broadcaster have proposed
+invariant [inv9] ~faulty(broadcaster) & ~faulty(P) & committed(P, V) -> proposal(pv)

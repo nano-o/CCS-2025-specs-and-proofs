@@ -36,3 +36,34 @@ Notes:
 A PlusCal/TLA+ specification appears in [TwoStepOptimiticBroadcast.tla](./TwoStepOptimiticBroadcast.tla).
 
 ### Ivy and Isabelle/HOL specifications and mechanically-checked proofs
+
+We show 3 properties of the optimistic RBC protocol:
+- No two non-faulty parties disagree on the committed value (see invariant `agreement` in [opti_rbc.ivy](./opti_rbc.ivy)).
+- If the broadcaster is non-faulty, then eventually all non-faulty parties commit its value (see action `check_validity` in [opti_rbc.ivy](./opti_rbc.ivy)).
+- If a non-faulty party commits, then eventually all non-faulty parties commit (see action `check_totality` in [opti_rbc.ivy](./opti_rbc.ivy)).
+
+The proof has two parts: an Ivy proof based on an abstract model in [opti_rbc.ivy](./opti_rbc.ivy), and a separate proof in Isabelle/HOL that the abstract model is sound in [OptiRBC/AxiomaticDomainModel.thy](./OptiRBC/AxiomaticDomainModel.thy).
+The safety-proof methodology is comparable to the methodology of the paper [Verification of Threshold-Based Distributed Algorithms by Decomposition to Decidable Logics](https://arxiv.org/abs/1905.07805), except that the BAPA part was done in Isabelle/HOL.
+
+#### Checking the Ivy proof
+
+Install [Ivy](https://github.com/kenmcmil/ivy) in a Python 3 virtual environment and check the proof:
+
+```bash
+git clone https://github.com/kenmcmil/ivy.git
+python3 -m venv ivy-venv
+source ivy-venv/bin/activate
+cd ivy
+pip install -e .
+cd ..
+ivy_check seed=$RANDOM opti_rbc.ivy
+```
+
+If it takes too long then just restart `ivy_check`; you might get luckier with the next random seed.
+
+#### Checking the Isabelle proof
+
+Install Isabelle and then open [OptiRBC/AbstractDomainModel.thy](./OptiRBC/AbstractDomainModel.thy) and [OptiRBC/AxiomaticDomainModel.thy](./OptiRBC/AxiomaticDomainModel.thy).
+`AbstractDomainModel` defines the abstract model, and `AxiomaticDomainModel` shows that the axiomatic model based on thresholds satisfies all the properties of the abstract model.
+
+The session is described in [OptiRBC/ROOT](./OptiRBC/ROOT); to build it from the command line, run `isabelle build -D OptiRBC` from the repository root.
