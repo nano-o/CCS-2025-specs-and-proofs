@@ -1,3 +1,5 @@
 states/
 *.old
 OptiRBC/output/
+*~
+.auctex-auto/

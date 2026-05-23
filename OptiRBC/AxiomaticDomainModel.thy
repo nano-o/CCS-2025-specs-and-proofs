@@ -346,7 +346,7 @@ proof -
     by (metis Diff_eq_empty_iff Int_absorb1 diff_diff_cancel diff_is_0_eq diff_le_mono2 f_pos faulty_inter inter_card not_one_le_zero)
 qed
 
-section "Mapping to the abstract domain model"
+section "Proof that we have an instance of the abstract domain model"
 
 definition opt_quorum_member :: "opt_quorum => party => bool" where
   "opt_quorum_member Q p \<equiv> p \<in> Rep_opt_quorum Q"

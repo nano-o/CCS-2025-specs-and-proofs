@@ -2,6 +2,8 @@ theory AbstractDomainModel
   imports Complex_Main
 begin
 
+text \<open>This is the abstract domain model used in the Ivy specification\<close>
+
 locale abstract_domain_model =
   fixes broadcaster :: "'p::finite"
     and faulty :: "'p set"
