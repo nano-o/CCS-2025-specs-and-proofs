@@ -1,7 +1,5 @@
-session OptiRBC = "HOL-Statespace" +
+session OptiRBC = HOL +
   options [document = pdf, document_output = "output", browser_info=true, quick_and_dirty=true]
-  sessions
-    "HOL-Eisbach"
   theories
     AbstractDomainModel AxiomaticDomainModel
   document_files

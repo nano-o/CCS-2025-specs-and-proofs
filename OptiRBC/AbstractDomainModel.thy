@@ -1,5 +1,5 @@
 theory AbstractDomainModel
-  imports Complex_Main
+  imports HOL.Real
 begin
 
 text \<open>This is the abstract domain model used in the Ivy specification\<close>
