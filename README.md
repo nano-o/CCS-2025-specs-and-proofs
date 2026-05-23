@@ -2,7 +2,7 @@
 
 The paper is available at the following link: ["Optimistic, Signature-Free Reliable Broadcast and Its Applications"](https://arxiv.org/abs/2505.02761).
 
-Note that, in versions `v3` and earlier, the optimistic RBC protocol has a liveness issue.
+Note that, in versions `v3` and earlier (`v3` is the arXiv paper version), the optimistic RBC protocol has a liveness issue.
 Version `v4` fixes the issue.
 Additionally, to rule out any remaining issue, we have written a mechanically-checked proof of both the safety and liveness of the optimistic RBC protocol.
 This proof uses the Ivy prover and the Isabelle/HOL proof assistant (see below).
