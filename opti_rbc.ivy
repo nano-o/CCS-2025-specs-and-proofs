@@ -200,7 +200,6 @@ action ready_step(p:party, v:val) = {
 # Optimistic commit: a non-broadcaster party commits after seeing an
 # optimistic-quorum of echoes (unless it has already committed some other value).
 action opt_commit_step(p:party, v:val) = {
-    require p ~= broadcaster;
     require forall V. ~committed(p, V);
     require exists Q. forall P. opt_quorum_member(Q, P) -> echo(P, v);
     committed(p, v) := true;
